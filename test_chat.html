@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin: 10px 0; }
+        .message { margin: 5px 0; }
+        .system { color: #666; font-style: italic; }
+        .error { color: red; }
+        input, button { margin: 5px; padding: 5px; }
+        #messageInput { width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Chat App Test</h1>
+    
+    <div>
+        <label>User ID:</label>
+        <input type="text" id="userId" placeholder="Enter your username" value="user1">
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+    
+    <div>
+        <label>Room:</label>
+        <select id="roomSelect">
+            <option value="general">General</option>
+            <option value="random">Random</option>
+        </select>
+        <button onclick="joinRoom()">Join Room</button>
+        <button onclick="leaveRoom()">Leave Room</button>
+    </div>
+    
+    <div id="messages"></div>
+    
+    <div>
+        <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    
+    <div>
+        <label>Status:</label>
+        <span id="status">Disconnected</span>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentRoom = null;
+
+        function connect() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+
+            ws = new WebSocket(`ws://localhost:8000/ws/${userId}`);
+            
+            ws.onopen = function(event) {
+                document.getElementById('status').textContent = 'Connected';
+                addMessage('Connected to chat server', 'system');
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+
+            ws.onclose = function(event) {
+                document.getElementById('status').textContent = 'Disconnected';
+                addMessage('Disconnected from server', 'system');
+            };
+
+            ws.onerror = function(error) {
+                addMessage('Connection error: ' + error, 'error');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function joinRoom() {
+            if (!ws) {
+                alert('Please connect first');
+                return;
+            }
+
+            const roomId = document.getElementById('roomSelect').value;
+            currentRoom = roomId;
+            
+            ws.send(JSON.stringify({
+                type: 'join_room',
+                room_id: roomId
+            }));
+        }
+
+        function leaveRoom() {
+            if (!ws || !currentRoom) return;
+
+            ws.send(JSON.stringify({
+                type: 'leave_room',
+                room_id: currentRoom
+            }));
+            currentRoom = null;
+        }
+
+        function sendMessage() {
+            if (!ws || !currentRoom) {
+                alert('Please connect and join a room first');
+                return;
+            }
+
+            const messageInput = document.getElementById('messageInput');
+            const content = messageInput.value.trim();
+            
+            if (content) {
+                ws.send(JSON.stringify({
+                    type: 'send_message',
+                    room_id: currentRoom,
+                    content: content
+                }));
+                messageInput.value = '';
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function handleMessage(data) {
+            switch(data.type) {
+                case 'connected':
+                    addMessage(data.message, 'system');
+                    break;
+                case 'message':
+                    addMessage(`${data.sender_id}: ${data.content}`, 'message');
+                    break;
+                case 'user_joined':
+                    addMessage(`${data.user_id} joined the room`, 'system');
+                    break;
+                case 'user_left':
+                    addMessage(`${data.user_id} left the room`, 'system');
+                    break;
+                case 'room_joined':
+                    addMessage(`Joined room: ${data.room_id}`, 'system');
+                    // Display recent messages
+                    data.recent_messages.forEach(msg => {
+                        addMessage(`${msg.sender_id}: ${msg.content}`, 'message');
+                    });
+                    break;
+                case 'room_left':
+                    addMessage(`Left room: ${data.room_id}`, 'system');
+                    break;
+                case 'error':
+                    addMessage(`Error: ${data.message}`, 'error');
+                    break;
+                default:
+                    console.log('Unknown message type:', data);
+            }
+        }
+
+        function addMessage(text, className = '') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>
