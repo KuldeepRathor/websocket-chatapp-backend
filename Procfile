@@ -1,1 +1,1 @@
-web: python -c "import os; import uvicorn; uvicorn.run('app.main:app', host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))"
+web: sh -c "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
