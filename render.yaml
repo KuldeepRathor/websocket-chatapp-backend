@@ -1,7 +1,7 @@
 services:
   - type: web
     name: websocket-chat-app
-    runtime: python3
+    runtime: python
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -16,6 +16,3 @@ services:
         value: false
       - key: CORS_ORIGINS
         value: "*"
-    scaling:
-      minInstances: 1
-      maxInstances: 3
