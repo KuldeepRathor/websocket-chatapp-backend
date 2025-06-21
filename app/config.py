@@ -12,9 +12,6 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: List[str] = ["*"]
     
-    # Database
-    database_url: str = "sqlite:///./chat.db"
-    
     # Security
     secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
     algorithm: str = "HS256"

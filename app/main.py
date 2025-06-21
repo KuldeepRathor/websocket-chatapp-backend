@@ -9,7 +9,6 @@ from datetime import datetime
 import hashlib
 
 from .config import get_settings
-from .database import engine, Base
 from .websocket.connection_manager import manager
 from .websocket.handlers.message_handler import (
     handle_send_message, 
@@ -29,10 +28,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
     logger.info("Starting up Chat App...")
-    
-    # Create database tables
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created")
+    logger.info("Using in-memory storage for demo")
     
     yield
     
